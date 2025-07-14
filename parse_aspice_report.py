@@ -15,43 +15,46 @@ import pandas as pd
 import argparse
 from typing import Text
 
-
-report_path = r"/home/workspace/perception/.vscode/static_check_parse/data/perception_rule+DEVOPS专用勿动!!! (18).csv" # Coverity生成的静态代码检查报告路径
+report_path = r"/home/workspace/perception/scripts/static_code_parse/static_check_pare_0710/data/perception_rule+DEVOPS专用勿动!!! (0713).csv"  # Coverity生成的静态代码检查报告路径
 source_path = r"/home/workspace/perception"  # 源代码根路径
 backup = True  # 是否创建备份文件
-init_state_file_flag = True # 是否初始化状态文件
-expect_checker = []
+init_state_file_flag = True  # 是否初始化状态文件
+# expect_checker = []
 # expect_checker = ["AUTOSAR C++14 A1-1-1"] # 期望的检查器列表，示例：只处理AUTOSAR C++14 M5-0-4检查器
-expect_checker = ["AUTOSAR C++14 M5-0-4", "AUTOSAR C++14 M5-0-6", "AUTOSAR C++14 M5-0-3", "AUTOSAR C++14 M5-0-5", "AUTOSAR C++14 A4-7-1"] # 期望的检查器列表，示例：只处理AUTOSAR C++14 M5-0-4检查器
-state_path_file = r"\static_check_parse\data\state_file"  # 状态文件路径
-file_info_path = r"\static_check_parse\result\file_info.json"  # 放入提示词中的文件信息路径
+expect_checker = ["AUTOSAR C++14 M5-0-4", "AUTOSAR C++14 M5-0-6", "AUTOSAR C++14 M5-0-3",
+                  "AUTOSAR C++14 M5-0-5"]  # 期望的检查器列表，示例：只处理AUTOSAR C++14 M5-0-4检查器
+state_path_file = r"\data\state_file"  # 状态文件路径
+file_info_path = r"\result\file_info.json"  # 放入提示词中的文件信息路径
 _filter_path = ""  # 过滤路径，示例：只处理包含static_object的文件
-_filter_Log = False # 是否过滤掉LOG相关的行
-SKIP_LOG_NUM = 0 # 跳过的LOG行数
-
+_filter_Log = True  # 是否过滤掉LOG相关的行
+SKIP_LOG_NUM = 0  # 跳过的LOG行数
 
 # LOG检测相关配置
 LOG_PATTERNS = [
-    r'LOG_\w+\s*\(',   # 匹配 LOG_INFO(...)、LOG_ERROR(...) 等函数调用形式
-    r'LOG_\w+\s*<<',   # 匹配 LOG_INFO << ...、LOG_ERROR << ... 等流式日志输出
+    r'LOG_\w+\s*\(',  # 匹配 LOG_INFO(...)、LOG_ERROR(...) 等函数调用形式
+    r'LOG_\w+\s*<<',  # 匹配 LOG_INFO << ...、LOG_ERROR << ... 等流式日志输出
 ]
 
 
 def timestamp_to_md5():
     # 获取当前时间戳（精确到毫秒）
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:-3]
-    
+
     # 计算MD5哈希值
     md5_hash = hashlib.md5(timestamp.encode('utf-8')).hexdigest()
     return md5_hash
+
+
 unique_id = timestamp_to_md5()[:4]
 print("生成的唯一标识符:", unique_id)
 
+
 def root_path():
     """ 获取 根路径： /static-modeling/scripts/tools """
-    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # '/home/d800518/static-modeling/scripts/tools'
+    path = os.path.dirname(os.path.abspath(__file__))  # '/home/d800518/static-modeling/scripts/tools'
     # path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) # '/home/d800518/static-modeling'
     return path
+
 
 def ensure_path_sep(path: Text) -> Text:
     """兼容 windows 和 linux 不同环境的操作系统路径 """
@@ -62,6 +65,7 @@ def ensure_path_sep(path: Text) -> Text:
         path = os.sep.join(path.split("\\"))
 
     return root_path() + path
+
 
 def backup_file(file_path: str, unique_id) -> None:
     """备份文件（单文件备份"""
@@ -79,11 +83,12 @@ def backup_file(file_path: str, unique_id) -> None:
     os.makedirs(os.path.dirname(backup_file_path), exist_ok=True)
     try:
         with open(file_path, 'r', encoding='utf-8') as src_file, \
-             open(backup_file_path, 'w', encoding='utf-8') as backup_file:
+                open(backup_file_path, 'w', encoding='utf-8') as backup_file:
             backup_file.writelines(src_file.readlines())
         logging.debug(f"为 {file_path} 创建备份文件: {backup_file_path}")
     except Exception as e:
         logging.error(f"备份文件 {file_path} 失败: {e}")
+
 
 def create_backup(src: str, backup: bool = True) -> None:
     # 创建源文件夹的备份
@@ -99,7 +104,8 @@ def create_backup(src: str, backup: bool = True) -> None:
         shutil.copytree(src, dst)
         print(f"已备份 {src} 到 {dst}")
 
-def parse_csv_report(report_path: str, expect_checker:list=None) -> dict:
+
+def parse_csv_report(report_path: str, expect_checker: list = None) -> dict:
     """解析CSV格式的静态代码检测报告，提取问题行信息"""
     issues = {}
     try:
@@ -136,6 +142,7 @@ def parse_csv_report(report_path: str, expect_checker:list=None) -> dict:
         return {}
     return issues
 
+
 def load_processed_issues(state_file: str) -> dict:
     """加载已处理问题的状态"""
     if os.path.exists(state_file):
@@ -148,7 +155,8 @@ def load_processed_issues(state_file: str) -> dict:
     initialize_state_file(state_file)
     return {}
 
-def initialize_state_file(state_file: str, init_flag: bool=False) -> None:
+
+def initialize_state_file(state_file: str, init_flag: bool = False) -> None:
     """初始化空的状态文件"""
     if init_flag and os.path.exists(state_file):
         os.remove(state_file)
@@ -168,6 +176,7 @@ def initialize_state_file(state_file: str, init_flag: bool=False) -> None:
         except Exception as e:
             logging.error(f"创建状态文件 {state_file} 失败: {e}")
 
+
 def save_processed_issues(state_file: str, processed: dict) -> None:
     """保存已处理问题的状态"""
     try:
@@ -176,15 +185,18 @@ def save_processed_issues(state_file: str, processed: dict) -> None:
     except Exception as e:
         logging.error(f"保存状态文件 {state_file} 失败: {e}")
 
+
 def generate_issue_key(line_num: int, description: str) -> str:
     """生成问题的唯一标识键，使用行号和描述"""
     return f"{line_num}_{description}"
     # return md5(f"{file_path}_{line_hash}_{description}".encode('utf-8')).hexdigest()
 
+
 def get_processed_issues(file_path: str, state: dict) -> list:
     """获取文件已处理的问题"""
     file_state = state.get(file_path, {})
     return file_state.get('issues', [])
+
 
 def extract_issue_description(text: str) -> str:
     """从注释中提取问题描述内容（精确模式）"""
@@ -194,6 +206,7 @@ def extract_issue_description(text: str) -> str:
     if match:
         return match.group(1).strip()
     return ""
+
 
 def annotate_file(file_path: str, issues: dict, state_file: str) -> bool:
     """在C++文件中添加问题注释，使用状态文件避免重复添加"""
@@ -270,7 +283,8 @@ def annotate_file(file_path: str, issues: dict, state_file: str) -> bool:
         logging.error(f"处理文件 {file_path} 失败: {e}")
         return False
 
-def parse_state_file(state_file: str=ensure_path_sep(state_path_file)) -> dict:
+
+def parse_state_file(state_file: str = ensure_path_sep(state_path_file)) -> dict:
     """解析状态文件，返回已处理问题的字典"""
     if not os.path.exists(state_file):
         logging.warning(f"状态文件 {state_file} 不存在")
@@ -291,6 +305,7 @@ def parse_state_file(state_file: str=ensure_path_sep(state_path_file)) -> dict:
     except Exception as e:
         logging.error(f"解析状态文件 {state_file} 失败: {e}")
 
+
 def write_with_json(file_path: str, data: dict) -> None:
     """将数据写入JSON文件"""
     # 不存在文件时，创建目录
@@ -306,6 +321,7 @@ def write_with_json(file_path: str, data: dict) -> None:
             logging.info(f"已将数据写入文件 {file_path}")
     except Exception as e:
         logging.error(f"写入文件 {file_path} 失败: {e}")
+
 
 def main():
     """主函数"""
@@ -344,11 +360,11 @@ def main():
             continue
         # 检查文件是否为C++文件
         ext = Path(file_path).suffix.lower()
-        if ext not in ['.cpp', '.cxx', '.cc', '.c', '.h', '.hpp', '.hxx', '.cuh', '.hh', '.cu','.h++', '.c++']:
+        if ext not in ['.cpp', '.cxx', '.cc', '.c', '.h', '.hpp', '.hxx', '.cuh', '.hh', '.cu', '.h++', '.c++']:
             logging.warning(f"文件 {file_path} 不是C++文件，跳过")
             continue
         # 备份当前文件
-        backup_file(file_path, timestamp_uniq) 
+        backup_file(file_path, timestamp_uniq)
         # 处理文件
         if annotate_file(file_path, file_issues, state_file):
             success_files += 1
@@ -368,4 +384,4 @@ if __name__ == '__main__':
     start_time = time.time()
     main()
     end_time = time.time()
-    print(f"执行时间为:{end_time-start_time}")
+    print(f"执行时间为:{end_time - start_time}")
